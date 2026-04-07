@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+print("🔥 FASTAPI FILE LOADED")
 
 from fastapi import FastAPI
 import argparse
