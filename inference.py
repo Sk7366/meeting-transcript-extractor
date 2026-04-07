@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from fastapi import FastAPI   # ✅ ONLY HERE (top)
+from fastapi import FastAPI
 import argparse
 from environment import MeetingTranscriptEnv
 from tasks import get_task, list_tasks
@@ -8,8 +8,12 @@ from graders import grade_task, compute_final_score
 from models import ActionItem
 import re
 
-app = FastAPI()  # ✅ define early
+# ✅ CREATE APP FIRST (CRITICAL)
+app = FastAPI()
 
+# -------------------------
+# AGENT LOGIC
+# -------------------------
 def baseline_agent(env) -> list[ActionItem]:
     transcript = env.transcript.content.lower()
     actions = []
@@ -54,18 +58,21 @@ def run_baseline(task_ids: list[str]):
     
     return compute_final_score(all_scores)
 
-# ✅ API endpoint
+# -------------------------
+# API ROUTES (CRITICAL)
+# -------------------------
+
 @app.get("/")
 def read_root():
     return {"message": "Meeting Transcript Environment is running!"}
 
-# ✅ Optional: real demo endpoint (VERY useful)
 @app.get("/run")
 def run():
-    result = run_baseline(list_tasks())
-    return result
+    return run_baseline(list_tasks())
 
-# CLI runner (local use only)
+# -------------------------
+# CLI (ONLY FOR LOCAL)
+# -------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", choices=list_tasks() + ["all"], default="all")
