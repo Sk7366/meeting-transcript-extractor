@@ -73,3 +73,11 @@ if __name__ == "__main__":
     
     task_ids = list_tasks() if args.task == "all" else [args.task]
     run_baseline(task_ids)
+    from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"message": "Meeting Transcript Environment is running!"}
+    
