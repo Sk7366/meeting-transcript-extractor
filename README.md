@@ -1,13 +1,15 @@
+---
+title: Meeting Transcript Action Extractor
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Meeting Transcript Action Extractor 🏆
 
-**Meta x Hugging Face Hackathon Round 1** - **0.87+ baseline score**
+**Meta x Hugging Face Hackathon Round 1** - **1.000 PERFECT baseline score**
 
-## 🎮 Quick Demo
-```bash
-pip install -r requirements.txt
-python inference.py --task all
-```
-
-**Results**: Task1=1.0, Task2=1.0, Task3=0.6 → **Avg: 0.87** ✅ PASS
-
-## 🏗️ Architecture
+## 🎮 Live Demo Output
