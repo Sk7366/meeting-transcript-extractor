@@ -1,0 +1,37 @@
+name: meeting-transcript-action-extractor
+version: 1.0.0
+description: |
+  AI agent extracts action items from corporate meeting transcripts.
+  3 tasks: Easy(1 explicit), Medium(3 implied owners), Hard(4 ambiguous).
+
+  Actions: extract_action(), assign_owner(), set_deadline(), mark_complete()
+  Rewards: +0.3 extraction, +0.2 owner, +0.15 deadline, +0.1 complete
+         -0.2 hallucination, -0.15 premature complete, -0.3 loops
+
+tasks:
+  task_1:
+    difficulty: easy
+    description: "1 explicit action item with owner + deadline"
+    max_steps: 10
+  task_2:
+    difficulty: medium
+    description: "3 action items, implied owners (e.g. 'design team should...')"
+    max_steps: 25
+  task_3:
+    difficulty: hard
+    description: "4 ambiguous items: inferred deadlines, first names, buried chat"
+    max_steps: 50
+
+reward_shaping:
+  positive:
+    extract_action: 0.3
+    assign_owner: 0.2
+    set_deadline: 0.15
+    mark_complete: 0.1
+  negative:
+    hallucination: -0.2
+    premature_complete: -0.15
+    loop_penalty: -0.3
+
+entrypoint: python inference.py --task={task_id}
+gymnasium_compatible: true
