@@ -68,6 +68,11 @@ button {
     animation: fade 0.5s;
 }
 
+.done {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
 @keyframes fade {
     from {opacity:0}
     to {opacity:1}
@@ -91,7 +96,7 @@ button {
 
 <textarea id="transcript" placeholder="Paste or speak your transcript..."></textarea><br>
 
-<button class="primary" onclick="extract()">Extract</button>
+<button class="primary" onclick="extract()">Generate Action Plan</button>
 <button onclick="startVoice()">🎤 Speak</button>
 
 <div id="result"></div>
@@ -101,6 +106,9 @@ button {
 </div>
 
 <script>
+
+let actionsData = [];
+
 function toggleTheme() {
     document.body.classList.toggle("light");
 }
@@ -113,6 +121,70 @@ function startVoice() {
     }
 }
 
+// 🔥 EDIT FEATURES
+function markDone(index) {
+    actionsData[index].status = "completed";
+    renderActions();
+}
+
+function updateOwner(index, value) {
+    actionsData[index].owner = value;
+}
+
+function updateDeadline(index, value) {
+    actionsData[index].deadline = value;
+}
+
+// 🔥 RENDER FUNCTION (NEW)
+function renderActions() {
+    const resDiv = document.getElementById("result");
+
+    resDiv.innerHTML = `<h3>✅ ${actionsData.length} items</h3>`;
+
+    let owners = {};
+
+    actionsData.forEach((a, i) => {
+        owners[a.owner] = (owners[a.owner] || 0) + a.confidence;
+
+        resDiv.innerHTML += `
+        <div class="card ${a.status === 'completed' ? 'done' : ''}">
+            <b>👤 <input value="${a.owner}" onchange="updateOwner(${i}, this.value)"></b><br>
+            
+            📝 ${a.description}<br>
+
+            📅 <input value="${a.deadline || ''}" placeholder="Set deadline"
+                onchange="updateDeadline(${i}, this.value)"><br>
+
+            🎯 ${a.confidence}
+
+            <br><br>
+
+            <button onclick="markDone(${i})">✅ Mark Done</button>
+
+            <div class="reasoning">
+                🤖 AI Reasoning: Identified action phrase + contextual mapping
+            </div>
+        </div>`;
+    });
+
+    // 🔥 Chart fix (confidence-based)
+    if (window.myChart) window.myChart.destroy();
+
+    const ctx = document.getElementById("chart").getContext("2d");
+
+    window.myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(owners),
+            datasets: [{
+                label: 'Task Weight (Confidence)',
+                data: Object.values(owners)
+            }]
+        }
+    });
+}
+
+// 🔥 MAIN EXTRACT
 async function extract() {
     const text = document.getElementById("transcript").value;
     const resDiv = document.getElementById("result");
@@ -132,71 +204,9 @@ async function extract() {
         return;
     }
 
-    resDiv.innerHTML = `<h3>✅ ${data.items_found} items</h3>`;
+    actionsData = data.actions;
 
-    let owners = {};
-
-    data.actions.forEach(a => {
-        owners[a.owner] = (owners[a.owner] || 0) + 1;
-
-        resDiv.innerHTML += `
-        <div class="card">
-            <b>👤 ${a.owner}</b><br>
-            📝 ${a.description}<br>
-            📅 ${a.deadline || "No deadline"}<br>
-            🎯 ${a.confidence}
-            <div class="reasoning">
-                🤖 Detected via keyword matching and contextual inference
-            </div>
-        </div>`;
-    });
-
-    // Chart
-    // Chart (FIXED)
-
-// Destroy previous chart if exists
-if (window.myChart) {
-    window.myChart.destroy();
-}
-
-// Ensure canvas context
-const ctx = document.getElementById("chart").getContext("2d");
-
-// Create chart
-window.myChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: Object.keys(owners),
-        datasets: [{
-            label: 'Tasks per Owner',
-            data: Object.values(owners),
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                labels: {
-                    color: document.body.classList.contains("light") ? "black" : "white"
-                }
-            }
-        },
-        scales: {
-            x: {
-                ticks: {
-                    color: document.body.classList.contains("light") ? "black" : "white"
-                }
-            },
-            y: {
-                ticks: {
-                    color: document.body.classList.contains("light") ? "black" : "white"
-                },
-                beginAtZero: true
-            }
-        }
-    }
-});
+    renderActions();
 }
 </script>
 
