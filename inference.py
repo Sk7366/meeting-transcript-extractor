@@ -215,3 +215,13 @@ def baseline_agent(env) -> list[ActionItem]:
     return actions
 
 print(f"📊 Routes: {[route.path for route in app.routes]}")
+# -------------------------
+# ✅ REQUIRED FOR GRADIO (HF APP.PY)
+# -------------------------
+def extract_actions(transcript: str):
+    """
+    Wrapper function for Gradio app
+    """
+    actions = extract_actions_from_text(transcript)
+    return actions
+    
