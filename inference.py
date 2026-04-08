@@ -10,21 +10,32 @@ from models import ActionItem
 import re
 
 # ✅ 1. CREATE APP FIRST
-app = FastAPI()
+app = FastAPI(title="Meeting Transcript Action Extractor", version="1.0")
 
-# ✅ 2. DEFINE ROUTES IMMEDIATELY
+# ✅ 2. DEFINE ROUTES IMMEDIATELY (self-contained /run)
 @app.get("/")
 def read_root():
     return {"message": "Meeting Transcript Environment is running!"}
 
 @app.get("/run")
 def run():
-    return run_baseline(list_tasks())
+    """Run baseline extraction on all tasks"""
+    try:
+        task_ids = list_tasks()
+        all_scores = {}
+        
+        for task_id in task_ids:
+            transcript = get_task(task_id)
+            env = MeetingTranscriptEnv(transcript)
+            extracted = baseline_agent(env)
+            score = grade_task(task_id, extracted)
+            all_scores[task_id] = score
+        
+        return compute_final_score(all_scores)
+    except Exception as e:
+        return {"error": str(e), "message": "Extraction failed"}
 
-# -------------------------
-# 3. LOGIC BELOW
-# -------------------------
-
+# ✅ 3. LOGIC FUNCTIONS (must be after route definitions)
 def baseline_agent(env) -> list[ActionItem]:
     transcript = env.transcript.content.lower()
     actions = []
@@ -57,20 +68,11 @@ def baseline_agent(env) -> list[ActionItem]:
     
     return actions
 
-def run_baseline(task_ids: list[str]):
-    all_scores = {}
-    
-    for task_id in task_ids:
-        transcript = get_task(task_id)
-        env = MeetingTranscriptEnv(transcript)
-        extracted = baseline_agent(env)
-        score = grade_task(task_id, extracted)
-        all_scores[task_id] = score
-    
-    return compute_final_score(all_scores)
+# ✅ 4. DEBUG ROUTES REGISTERED
+print(f"📊 Registered routes: {[route.path for route in app.routes]}")
 
 # -------------------------
-# 4. CLI ONLY (BOTTOM)
+# 5. CLI ONLY (BOTTOM)
 # -------------------------
 if __name__ == "__main__":
     import argparse
@@ -80,4 +82,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     task_ids = list_tasks() if args.task == "all" else [args.task]
-    run_baseline(task_ids)
+    
+    # Inline run_baseline logic for CLI too
+    all_scores = {}
+    for task_id in task_ids:
+        transcript = get_task(task_id)
+        env = MeetingTranscriptEnv(transcript)
+        extracted = baseline_agent(env)
+        score = grade_task(task_id, extracted)
+        all_scores[task_id] = score
+    
+    print(compute_final_score(all_scores))
