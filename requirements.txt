@@ -4,7 +4,5 @@ pydantic==2.12.0
 pyyaml==6.0.2
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
-
-# 🔥 ADD THIS
 openai>=1.0.0
 python-multipart

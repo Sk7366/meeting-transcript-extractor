@@ -16,19 +16,21 @@ from graders import grade_task, compute_final_score
 from models import ActionItem
 
 # -------------------------
-# ✅ ENV VARIABLES (REQUIRED)
+# ✅ ENV VARIABLES (FIXED)
 # -------------------------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN = os.getenv("HF_TOKEN")  # ❌ NO DEFAULT
 
-# Optional
-LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+# ✅ IMPORTANT FIX: Read API key correctly
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # -------------------------
-# ✅ OPENAI CLIENT (REQUIRED)
+# ✅ OPENAI CLIENT (FIXED)
 # -------------------------
-client = OpenAI(base_url=API_BASE_URL)
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    base_url=API_BASE_URL
+)
 
 # -------------------------
 # APP INIT
@@ -66,11 +68,15 @@ def get_deadline_for_action(text, keyword):
     return None
 
 # -------------------------
-# ✅ OPTIONAL LLM PARSER (FOR COMPLIANCE + BOOST)
+# ✅ SAFE LLM PARSER (FIXED)
 # -------------------------
 def llm_extract(transcript):
     try:
         print("STEP: Calling LLM")
+
+        if not OPENAI_API_KEY:
+            print("⚠️ No API key found, skipping LLM")
+            return None
 
         response = client.chat.completions.create(
             model=MODEL_NAME,
@@ -81,10 +87,11 @@ def llm_extract(transcript):
             max_tokens=200
         )
 
+        print("✅ LLM success")
         return response.choices[0].message.content
 
     except Exception as e:
-        print("STEP: LLM failed, fallback to rule-based")
+        print("❌ LLM failed:", str(e))
         return None
 
 # -------------------------
@@ -154,7 +161,7 @@ async def run(request: Request):
 
         print("STEP: Processing transcript")
 
-        # Optional LLM call (not mandatory for output)
+        # SAFE LLM CALL (non-blocking)
         llm_extract(transcript)
 
         actions = extract_actions_from_text(transcript)
@@ -167,7 +174,7 @@ async def run(request: Request):
         }
 
     except Exception as e:
-        print("END: Error occurred")
+        print("❌ ERROR:", str(e))
         return {"error": str(e)}
 
 # -------------------------
