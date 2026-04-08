@@ -1,4 +1,7 @@
 ---
+sdk: docker
+app_port: 7860
+---
 title: Meeting Transcript Action Extractor
 emoji: 🚀
 colorFrom: blue
