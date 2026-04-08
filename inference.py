@@ -64,9 +64,11 @@ def extract_actions_from_text(text: str):
         add_action("Create wireframes / design tasks", "design", 0.85)
 
     if "login" in text or "authentication" in text:
-        conf = 0.8
+        conf = 0.75
         if "bug" in text:
-            conf += 0.1
+            conf += 0.15
+        if "issue" in text:
+            conf += 0.05
         add_action("Fix login/authentication issue", "engineering", conf)
 
     if "marketing" in text or "launch" in text:
@@ -87,6 +89,14 @@ def extract_actions_from_text(text: str):
 
     if "sprint" in text or "planning" in text:
         add_action("Complete sprint planning", "team", 0.8)
+
+    # 🔥 FALLBACK (VERY IMPORTANT — NEVER EMPTY OUTPUT)
+    if len(actions) == 0:
+        add_action(
+            "General follow-up required from meeting",
+            "team",
+            0.5
+        )
 
     return actions
 
