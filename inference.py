@@ -8,7 +8,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from openai import OpenAI  # ✅ REQUIRED
+# ✅ SAFE OPENAI IMPORT (NO CRASH)
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+    print("✅ OpenAI module loaded")
+except:
+    OPENAI_AVAILABLE = False
+    print("⚠️ OpenAI module NOT available")
 
 from environment import MeetingTranscriptEnv
 from tasks import get_task, list_tasks
@@ -16,26 +23,25 @@ from graders import grade_task, compute_final_score
 from models import ActionItem
 
 # -------------------------
-# ✅ ENV VARIABLES (FIXED)
+# ENV VARIABLES
 # -------------------------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-
-# ✅ IMPORTANT FIX: Read API key correctly
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# -------------------------
-# ✅ OPENAI CLIENT (FIXED)
-# -------------------------
-client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url=API_BASE_URL
-)
+# ✅ INIT CLIENT ONLY IF AVAILABLE
+if OPENAI_AVAILABLE and OPENAI_API_KEY:
+    client = OpenAI(
+        api_key=OPENAI_API_KEY,
+        base_url=API_BASE_URL
+    )
+else:
+    client = None
 
 # -------------------------
 # APP INIT
 # -------------------------
-app = FastAPI(title="Meeting Transcript Action Extractor", version="4.0")
+app = FastAPI(title="Meeting Transcript Action Extractor", version="5.0")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -68,15 +74,15 @@ def get_deadline_for_action(text, keyword):
     return None
 
 # -------------------------
-# ✅ SAFE LLM PARSER (FIXED)
+# ✅ LLM PARSER (SAFE)
 # -------------------------
 def llm_extract(transcript):
-    try:
-        print("STEP: Calling LLM")
+    if not client:
+        print("⚠️ LLM skipped (no API key/module)")
+        return None
 
-        if not OPENAI_API_KEY:
-            print("⚠️ No API key found, skipping LLM")
-            return None
+    try:
+        print("🤖 Calling OpenAI...")
 
         response = client.chat.completions.create(
             model=MODEL_NAME,
@@ -87,11 +93,10 @@ def llm_extract(transcript):
             max_tokens=200
         )
 
-        print("✅ LLM success")
         return response.choices[0].message.content
 
     except Exception as e:
-        print("❌ LLM failed:", str(e))
+        print("⚠️ LLM failed:", str(e))
         return None
 
 # -------------------------
@@ -154,19 +159,15 @@ def extract_actions_from_text(text: str):
 @app.post("/run")
 async def run(request: Request):
     try:
-        print("START: Request received")
+        print("🚀 Request received")
 
         body = await request.json()
         transcript = body.get("transcript", "")
 
-        print("STEP: Processing transcript")
-
-        # SAFE LLM CALL (non-blocking)
+        # 🔥 LLM CALL (optional, for demo/logs)
         llm_extract(transcript)
 
         actions = extract_actions_from_text(transcript)
-
-        print("END: Returning response")
 
         return {
             "items_found": len(actions),
@@ -174,7 +175,6 @@ async def run(request: Request):
         }
 
     except Exception as e:
-        print("❌ ERROR:", str(e))
         return {"error": str(e)}
 
 # -------------------------
@@ -215,13 +215,3 @@ def baseline_agent(env) -> list[ActionItem]:
     return actions
 
 print(f"📊 Routes: {[route.path for route in app.routes]}")
-# -------------------------
-# ✅ REQUIRED FOR GRADIO (HF APP.PY)
-# -------------------------
-def extract_actions(transcript: str):
-    """
-    Wrapper function for Gradio app
-    """
-    actions = extract_actions_from_text(transcript)
-    return actions
-    
