@@ -2,23 +2,27 @@
 
 print("🔥 FASTAPI FILE LOADED")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 from environment import MeetingTranscriptEnv
 from tasks import get_task, list_tasks
 from graders import grade_task, compute_final_score
 from models import ActionItem
 import re
 
-# ✅ 1. CREATE APP FIRST
+# ✅ 1. CREATE APP
 app = FastAPI(title="Meeting Transcript Action Extractor", version="1.0")
 
-# ✅ 2. DEFINE ROUTES IMMEDIATELY (self-contained /run)
+# ✅ 2. SERVE FRONTEND UI AT "/"
 @app.get("/")
 def read_root():
-    return {"message": "Meeting Transcript Environment is running!"}
+    return FileResponse("static/index.html")
 
-@app.get("/run")
-def run():
+# ✅ 3. MAIN RUN ENDPOINT (NOW POST — matches frontend)
+@app.post("/run")
+async def run(request: Request):
     """Run baseline extraction on all tasks"""
     try:
         task_ids = list_tasks()
@@ -35,7 +39,7 @@ def run():
     except Exception as e:
         return {"error": str(e), "message": "Extraction failed"}
 
-# ✅ 3. LOGIC FUNCTIONS (must be after route definitions)
+# ✅ 4. LOGIC FUNCTIONS
 def baseline_agent(env) -> list[ActionItem]:
     transcript = env.transcript.content.lower()
     actions = []
@@ -68,11 +72,11 @@ def baseline_agent(env) -> list[ActionItem]:
     
     return actions
 
-# ✅ 4. DEBUG ROUTES REGISTERED
+# ✅ DEBUG ROUTES
 print(f"📊 Registered routes: {[route.path for route in app.routes]}")
 
 # -------------------------
-# 5. CLI ONLY (BOTTOM)
+# CLI MODE (UNCHANGED)
 # -------------------------
 if __name__ == "__main__":
     import argparse
@@ -83,7 +87,6 @@ if __name__ == "__main__":
     
     task_ids = list_tasks() if args.task == "all" else [args.task]
     
-    # Inline run_baseline logic for CLI too
     all_scores = {}
     for task_id in task_ids:
         transcript = get_task(task_id)
@@ -93,3 +96,26 @@ if __name__ == "__main__":
         all_scores[task_id] = score
     
     print(compute_final_score(all_scores))
+
+
+# -------------------------
+# PROMPT (UNCHANGED)
+# -------------------------
+SYSTEM_PROMPT = """You are a meeting transcript parser. Extract ALL action items.
+
+For each action item return a JSON object with:
+- description: the task (string)
+- owner: person or team responsible (string, lowercase)  
+- deadline: date in YYYY-MM-DD format if mentioned, else null
+- status: always "pending"
+
+Rules:
+- "end of week" = next Friday from context, use null if you can't determine
+- "EOW" = end of week
+- Relative dates like "by March 15" → "2026-03-15"
+- If no deadline is mentioned, return null — do NOT guess
+- Return ONLY a JSON array. No explanation. No markdown.
+
+Example output:
+[{"description":"Fix login bug","owner":"engineering","deadline":"2026-03-10","status":"pending"}]
+"""
